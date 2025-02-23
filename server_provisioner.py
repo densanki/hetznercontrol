@@ -80,30 +80,29 @@ class ServerProvisioner:
 
     def provision_server(self):
 
-        try:
-            server = self.hcloud_manager.get_server(60511861)
-        except Exception as ex:
-            logger.error(f"Get server state failed: {ex}")
-
-        logger.debug("Server Id: " + str(server.id))
-        logger.debug("Server Name: " + str(server.name))
-        logger.debug("Server Status: " + str(server.status))
-        logger.debug("Server IPv4: " + str(server.public_net.ipv4.ip))
-        logger.debug("Server IPv6: " + str(server.public_net.ipv6.ip))
-
-        serverModel = Server(server.id, server.name, server.status, server.public_net.ipv4.ip,
-                             server.public_net.ipv6.ip)
-
-        self.manage_server(serverModel)
-
-        self.hcloud_manager.reboot_server(server)
-        time.sleep(RESTART_DELAY)
-
-        if self.check_server_status(server):
-            self.manage_ollama(serverModel)
-
-        return
-
+        # try:
+        #     server = self.hcloud_manager.get_server(60511861)
+        # except Exception as ex:
+        #     logger.error(f"Get server state failed: {ex}")
+        #
+        # logger.debug("Server Id: " + str(server.id))
+        # logger.debug("Server Name: " + str(server.name))
+        # logger.debug("Server Status: " + str(server.status))
+        # logger.debug("Server IPv4: " + str(server.public_net.ipv4.ip))
+        # logger.debug("Server IPv6: " + str(server.public_net.ipv6.ip))
+        #
+        # serverModel = Server(server.id, server.name, server.status, server.public_net.ipv4.ip,
+        #                      server.public_net.ipv6.ip)
+        #
+        # self.manage_server(serverModel)
+        #
+        # self.hcloud_manager.reboot_server(server)
+        # time.sleep(RESTART_DELAY)
+        #
+        # if self.check_server_status(server):
+        #     self.manage_ollama(serverModel)
+        #
+        # return
 
         server = self.create_server()
 
@@ -114,12 +113,18 @@ class ServerProvisioner:
                 except Exception as ex:
                     logger.error(f"Get server state failed: {ex}")
 
-                #logger.debug("public_net: " + str(server.public_net))
-                #logger.debug("ipv4: " + str(server.public_net.ipv4))
+                serverModel = Server(server.id, server.name, server.status, server.public_net.ipv4.ip,
+                                     server.public_net.ipv6.ip)
 
+                self.manage_server(serverModel)
 
+                self.hcloud_manager.reboot_server(server)
+                time.sleep(RESTART_DELAY)
 
-        #if not self.hcloud_manager.delete_server(server):
+                if self.check_server_status(server):
+                    self.manage_ollama(serverModel)
+
+        # if not self.hcloud_manager.delete_server(server):
         #    self.notifier.send_email(
         #        subject="Server Deletion Failed",
         #        message=f"Failed to delete server '{server.name}' after multiple attempts."

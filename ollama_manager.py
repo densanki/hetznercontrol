@@ -39,7 +39,7 @@ class OllamaManager:
 
     def start_ollama(self):
         commands = [
-            "source /etc/environment"
+            "source /etc/environment",
             "printenv",
             "nohup ollama serve"
         ]

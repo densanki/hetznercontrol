@@ -8,12 +8,12 @@ from configuration import Configuration
 
 class EmailNotifier:
     def __init__(self, config: Configuration):
-        self.smtp_server = config.get('email','host')
-        self.smtp_port = int(config.get('email','port', fallback=25))
-        self.username = config.get('email','username')
-        self.password = config.get('email','password')
-        self.from_addr = config.get('email','from_addr')
-        self.to_addr = config.get('email', 'to_addr')
+        self.smtp_server = config.get('smtp','host')
+        self.smtp_port = int(config.get('smtp','port', fallback=25))
+        self.username = config.get('smtp','username')
+        self.password = config.get('smtp','password')
+        self.from_addr = config.get('smtp','from_addr')
+        self.to_addr = config.get('smtp', 'to_addr')
 
     def send_email(self, subject, message):
         msg = MIMEText(message)
