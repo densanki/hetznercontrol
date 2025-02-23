@@ -4,8 +4,9 @@ import time
 from model.server import Server
 
 # Konstanten
-RETRY_DELAY = 10  # Sekunden
-RESTART_DELAY = 10 # Sekunden
+RETRY_DELAY = 20  # Sekunden
+START_DELAY = 20 # Sekunden
+RESTART_DELAY = 20 # Sekunden
 
 class ServerProvisioner:
     def __init__(self, config, hcloud_manager, notifier, ssh_manager, ollama_manager):
@@ -16,7 +17,6 @@ class ServerProvisioner:
         self.ollama_manager = ollama_manager
 
     def check_server_status(self, server):
-        server_run: bool = False
         # Wait for server to be running
         try:
             while server.status != 'running':
@@ -25,10 +25,10 @@ class ServerProvisioner:
                 server = self.hcloud_manager.get_server(server.id)
 
             logger.debug(f"Server '{server.name}' is running.")
-            server_run = True
+            return True
         except Exception as exception:
             logger.error(f"Server status check failed: {exception}")
-        return server_run
+        return False
 
     def manage_server(self, serverModel: Server):
 
@@ -48,26 +48,13 @@ class ServerProvisioner:
             self.ssh_manager.close()
 
     def manage_ollama(self, serverModel: Server):
-        try:
-            if not self.ssh_manager.connect():
-                logger.error(f"Server Provisioning Failed. SSH connection to server '{serverModel.name}' failed.")
-                self.notifier.send_email(
-                    subject="Server Provisioning Failed",
-                    message=f"SSH connection to server '{serverModel.name}' failed."
-                )
-                return
-
-            self.ollama_manager.start_ollama()
-
-            if not self.ollama_manager.is_ollama_ready():
-                logger.error(f"Ollama Installation Failed. Ollama on server '{serverModel.name}' is not responding.")
-                self.notifier.send_email(
-                    subject="Ollama Installation Failed",
-                    message=f"Ollama on server '{serverModel.name}' is not responding."
-                )
-                return
-        finally:
-            self.ssh_manager.close()
+        if not self.ollama_manager.is_ollama_ready():
+            logger.error(f"Ollama Installation Failed. Ollama on server '{serverModel.name}' is not responding.")
+            self.notifier.send_email(
+                subject="Ollama Installation Failed",
+                message=f"Ollama on server '{serverModel.name}' is not responding."
+            )
+            return
 
     def create_server(self):
         hetzner_ssh_key_name = self.config.get('hetzner','ssh_key_name')
@@ -76,7 +63,11 @@ class ServerProvisioner:
         image_name = "ubuntu-22.04"
         server_location = "nbg1"
 
-        return self.hcloud_manager.create_server(server_name, server_type, image_name, server_location, hetzner_ssh_key_name)
+        server = self.hcloud_manager.create_server(server_name, server_type, image_name, server_location, hetzner_ssh_key_name)
+
+        time.sleep(START_DELAY)
+
+        return server
 
     def provision_server(self):
 

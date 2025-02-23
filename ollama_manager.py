@@ -33,17 +33,19 @@ class OllamaManager:
         self.ssh_manager.execute_commands(commands)
 
         commands = [
-            "echo 'OLLAMA_HOST=0.0.0.0:11434' | tee -a /etc/environment",
+            'mkdir -p /etc/systemd/system/ollama.service.d',
+            'echo -e \'[Service]\\nEnvironment="OLLAMA_HOST=0.0.0.0:11434"\' | sudo tee /etc/systemd/system/ollama.service.d/override.conf'
         ]
         self.ssh_manager.execute_commands(commands)
 
-    def start_ollama(self):
-        commands = [
-            "source /etc/environment",
-            "printenv",
-            "ollama serve"
-        ]
-        self.ssh_manager.execute_commands(commands)
+    #def start_ollama(self):
+        # commands = [
+        #     "source /etc/environment",
+        #     "printenv"
+        #     "ollama serve"
+        # ]
+        #
+        # self.ssh_manager.execute_commands(commands)
 
     def is_ollama_ready(self):
         url = OLLAMA_API_ENDPOINT.format(self.ssh_manager.get_hostname())
