@@ -77,6 +77,18 @@ class HetznerCloudManager:
             logger.error(f"Server creation failed: {ex}")
             return None
 
+    def reboot_server(self, server):
+        for attempt in range(MAX_RETRIES):
+            try:
+                self.client.servers.reboot(server)
+                logger.debug(f"Server '{server.name}' was rebooted.")
+                return True
+            except Exception as e:
+                logger.debug(f"Error on server delete: {e}")
+                time.sleep(RETRY_DELAY)
+        return False
+
+
     def delete_server(self, server):
         for attempt in range(MAX_RETRIES):
             try:

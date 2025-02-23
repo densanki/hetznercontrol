@@ -1,8 +1,11 @@
 from logging_config import logger
 import time
 
+from model.server import Server
+
 # Konstanten
 RETRY_DELAY = 5  # Sekunden
+RESTART_DELAY = 10 # Sekunden
 
 class ServerProvisioner:
     def __init__(self, config, hcloud_manager, notifier, ssh_manager, ollama_manager):
@@ -27,27 +30,42 @@ class ServerProvisioner:
             logger.error(f"Server status check failed: {exception}")
         return server_run
 
-    def manage_server(self, server):
+    def manage_server(self, serverModel: Server):
+
         try:
+            self.ssh_manager.set_hostname(serverModel.ipv4)
             if not self.ssh_manager.connect():
+                logger.error(f"Server Provisioning Failed. SSH connection to server '{serverModel.name}' failed.")
                 self.notifier.send_email(
                     subject="Server Provisioning Failed",
-                    message=f"SSH connection to server '{server.name}' failed."
+                    message=f"SSH connection to server '{serverModel.name}' failed."
                 )
                 return
 
-            self.ssh_manager.set_host(server.public_net.ipv4.ip)
             self.ollama_manager.install_ollama()
 
-            if not self.ollama_manager.is_ollama_ready():
+        finally:
+            self.ssh_manager.close()
+
+    def manage_ollama(self, serverModel: Server):
+        try:
+            if not self.ssh_manager.connect():
+                logger.error(f"Server Provisioning Failed. SSH connection to server '{serverModel.name}' failed.")
                 self.notifier.send_email(
-                    subject="Ollama Installation Failed",
-                    message=f"Ollama on server '{server.name}' is not responding."
+                    subject="Server Provisioning Failed",
+                    message=f"SSH connection to server '{serverModel.name}' failed."
                 )
                 return
 
-            # Perform tasks with Ollama here
+            self.ollama_manager.start_ollama()
 
+            if not self.ollama_manager.is_ollama_ready():
+                logger.error(f"Ollama Installation Failed. Ollama on server '{serverModel.name}' is not responding.")
+                self.notifier.send_email(
+                    subject="Ollama Installation Failed",
+                    message=f"Ollama on server '{serverModel.name}' is not responding."
+                )
+                return
         finally:
             self.ssh_manager.close()
 
@@ -62,21 +80,47 @@ class ServerProvisioner:
 
     def provision_server(self):
 
+        try:
+            server = self.hcloud_manager.get_server(60511861)
+        except Exception as ex:
+            logger.error(f"Get server state failed: {ex}")
+
+        logger.debug("Server Id: " + str(server.id))
+        logger.debug("Server Name: " + str(server.name))
+        logger.debug("Server Status: " + str(server.status))
+        logger.debug("Server IPv4: " + str(server.public_net.ipv4.ip))
+        logger.debug("Server IPv6: " + str(server.public_net.ipv6.ip))
+
+        serverModel = Server(server.id, server.name, server.status, server.public_net.ipv4.ip,
+                             server.public_net.ipv6.ip)
+
+        self.manage_server(serverModel)
+
+        self.hcloud_manager.reboot_server(server)
+        time.sleep(RESTART_DELAY)
+
+        if self.check_server_status(server):
+            self.manage_ollama(serverModel)
+
+        return
+
+
         server = self.create_server()
 
         if server:
-            server_status = self.check_server_status(server)
-
-            if server_status:
+            if self.check_server_status(server):
                 try:
                     server = self.hcloud_manager.get_server(server.id)
                 except Exception as ex:
                     logger.error(f"Get server state failed: {ex}")
 
-                self.manage_server(server)
+                #logger.debug("public_net: " + str(server.public_net))
+                #logger.debug("ipv4: " + str(server.public_net.ipv4))
 
-        if not self.hcloud_manager.delete_server(server):
-            self.notifier.send_email(
-                subject="Server Deletion Failed",
-                message=f"Failed to delete server '{server.name}' after multiple attempts."
-            )
+
+
+        #if not self.hcloud_manager.delete_server(server):
+        #    self.notifier.send_email(
+        #        subject="Server Deletion Failed",
+        #        message=f"Failed to delete server '{server.name}' after multiple attempts."
+        #    )

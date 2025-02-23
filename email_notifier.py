@@ -1,3 +1,5 @@
+import ssl
+
 from logging_config import logger
 import smtplib
 from email.mime.text import MIMEText
@@ -15,14 +17,16 @@ class EmailNotifier:
 
     def send_email(self, subject, message):
         msg = MIMEText(message)
-        msg["Subject"] = subject
+        msg["Subject"] = "Hetzner Control - " + subject
         msg["From"] = self.from_addr
         msg["To"] = self.to_addr
 
         try:
             with smtplib.SMTP_SSL(self.smtp_server, self.smtp_port) as server:
+                server.connect()
                 server.login(self.username, self.password)
                 server.sendmail(self.from_addr, [self.to_addr], msg.as_string())
-            logger.debug("E-Mail wurde gesendet.")
+            logger.debug("E-Mail was send.")
         except Exception as e:
-            logger.error(f"Fehler beim Senden der E-Mail: {e}")
+            logger.error(f"Error on sending e-mail:")
+            logger.exception(e)

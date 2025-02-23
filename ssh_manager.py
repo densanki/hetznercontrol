@@ -1,6 +1,4 @@
 from logging_config import logger
-import time
-
 import paramiko
 
 from configuration import Configuration
@@ -9,14 +7,24 @@ from configuration import Configuration
 MAX_RETRIES = 3
 RETRY_DELAY = 5
 
+
 class SSHManager:
     def __init__(self, config: Configuration):
+        self.config = config
+
         self.hostname = ''
-        self.username = config.get('hetzner', 'ssh_username')
-        self.key_path = config.get('hetzner', 'private_key_path')
-        self.passphrase = config.get('hetzner', 'private_key_passphrase')
+        self.username = self.config.get('hetzner', 'ssh_username')
+        self.key_path = self.config.get('hetzner', 'private_key_path')
+        self.passphrase = self.config.get('hetzner', 'private_key_passphrase')
+
         self.client = paramiko.SSHClient()
         self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    def set_hostname(self, hostname):
+        self.hostname = hostname
+
+    def get_hostname(self):
+        return self.hostname
 
     def connect(self):
         try:
@@ -38,19 +46,25 @@ class SSHManager:
             logger.info(f"SSH connection to {self.hostname} established.")
             return True
         except paramiko.AuthenticationException as auth_err:
-            logger.error(f"Authentication failed: {auth_err}")
+            logger.error("Authentication failed:")
+            logger.exception(auth_err)
         except paramiko.SSHException as ssh_err:
-            logger.error(f"SSH error: {ssh_err}")
+            logger.error("SSH error:")
+            logger.exception(ssh_err)
         except Exception as e:
-            logger.error(f"Unexpected error: {e}")
+            logger.error("Unexpected error:")
+            logger.exception(e)
         return False
 
-    def execute_commands(self, commands):
+    def execute_commands(self, commands, environment = None, pty = False):
         for command in commands:
             try:
-                stdin, stdout, stderr = self.client.exec_command(command)
+                stdin, stdout, stderr = self.client.exec_command(command, environment=environment, get_pty=pty)
                 stdout.channel.recv_exit_status()
-                logger.info(f"Executed: {command}")
+
+                logger.info(f"# Executed:\n{command}")
+                output = stdout.read().decode()
+                logger.info(f"# Output:\n{output}")
             except Exception as e:
                 logger.error(f"Failed to execute command '{command}': {e}")
 
