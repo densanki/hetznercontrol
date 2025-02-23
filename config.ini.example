@@ -1,0 +1,12 @@
+[hetzner]
+api_token=
+ssh_key_name=
+private_key_path=
+
+[smtp]
+host=
+port=
+username=
+password=
+from_addr=
+to_addr=
