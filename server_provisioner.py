@@ -4,7 +4,7 @@ import time
 from model.server import Server
 
 # Konstanten
-RETRY_DELAY = 5  # Sekunden
+RETRY_DELAY = 10  # Sekunden
 RESTART_DELAY = 10 # Sekunden
 
 class ServerProvisioner:

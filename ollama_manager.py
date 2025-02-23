@@ -33,7 +33,7 @@ class OllamaManager:
         self.ssh_manager.execute_commands(commands)
 
         commands = [
-            "sed -i ""\$aOLLAMA_HOST=0.0.0.0:11434"" /etc/environment"
+            "echo 'OLLAMA_HOST=0.0.0.0:11434' | tee -a /etc/environment",
         ]
         self.ssh_manager.execute_commands(commands)
 
@@ -41,7 +41,7 @@ class OllamaManager:
         commands = [
             "source /etc/environment",
             "printenv",
-            "nohup ollama serve"
+            "ollama serve"
         ]
         self.ssh_manager.execute_commands(commands)
 

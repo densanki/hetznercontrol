@@ -5,7 +5,7 @@ from configuration import Configuration
 
 # Konstanten
 MAX_RETRIES = 3
-RETRY_DELAY = 5
+RETRY_DELAY = 10
 
 
 class SSHManager:
