@@ -6,9 +6,12 @@ from hetzner_cloud_manager import HetznerCloudManager
 from ollama_manager import OllamaManager
 from server_provisioner import ServerProvisioner
 from ssh_manager import SSHManager
+import sys
 
 if __name__ == "__main__":
     logger.debug("### Starting")
+
+    sys.stdout.reconfigure(encoding='utf-8')
 
     configuration = Configuration()
     hcloud_manager = HetznerCloudManager(configuration)

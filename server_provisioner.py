@@ -56,6 +56,30 @@ class ServerProvisioner:
             )
             return
 
+        # Load Model
+        model_name = "deepseek-r1:1.5b"
+        result = self.ollama_manager.download_model(model_name)
+        if result:
+            logger.debug(f"Model '{model_name}' download initiated successfully.")
+        else:
+            logger.error(f"Failed to initiate download for model '{model_name}'.")
+
+        # Start Chat
+        user_message = "Hello, how are you?"
+        logger.info(f"Model's request: {user_message}")
+        reply = self.ollama_manager.send_chat_message(model_name, user_message)
+        logger.info(f"Model's response: {reply}")
+
+        user_message = "Please tell me a story about LLM fight humans in 300 words."
+        logger.info(f"Model's request: {user_message}")
+        reply = self.ollama_manager.send_chat_message(model_name, user_message)
+        logger.info(f"Model's response: {reply}")
+
+        user_message = "Thanks for the test. Bye Bye"
+        logger.info(f"Model's request: {user_message}")
+        reply = self.ollama_manager.send_chat_message(model_name, user_message)
+        logger.info(f"Model's response: {reply}")
+
     def create_server(self):
         hetzner_ssh_key_name = self.config.get('hetzner','ssh_key_name')
         server_name = "ollama-server"
@@ -72,9 +96,9 @@ class ServerProvisioner:
     def provision_server(self):
 
         # try:
-        #     server = self.hcloud_manager.get_server(60511861)
+        #     server = self.hcloud_manager.get_server(60517182)
         # except Exception as ex:
-        #     logger.error(f"Get server state failed: {ex}")
+        #      logger.error(f"Get server state failed: {ex}")
         #
         # logger.debug("Server Id: " + str(server.id))
         # logger.debug("Server Name: " + str(server.name))
@@ -83,7 +107,8 @@ class ServerProvisioner:
         # logger.debug("Server IPv6: " + str(server.public_net.ipv6.ip))
         #
         # serverModel = Server(server.id, server.name, server.status, server.public_net.ipv4.ip,
-        #                      server.public_net.ipv6.ip)
+        #                       server.public_net.ipv6.ip)
+        # self.ssh_manager.set_hostname(serverModel.ipv4)
         #
         # self.manage_server(serverModel)
         #
@@ -92,8 +117,8 @@ class ServerProvisioner:
         #
         # if self.check_server_status(server):
         #     self.manage_ollama(serverModel)
-        #
-        # return
+
+        #return
 
         server = self.create_server()
 
@@ -115,8 +140,8 @@ class ServerProvisioner:
                 if self.check_server_status(server):
                     self.manage_ollama(serverModel)
 
-        # if not self.hcloud_manager.delete_server(server):
-        #    self.notifier.send_email(
-        #        subject="Server Deletion Failed",
-        #        message=f"Failed to delete server '{server.name}' after multiple attempts."
-        #    )
+        if not self.hcloud_manager.delete_server(server):
+           self.notifier.send_email(
+               subject="Server Deletion Failed",
+               message=f"Failed to delete server '{server.name}' after multiple attempts."
+           )
