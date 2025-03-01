@@ -1,3 +1,4 @@
+
 import pytest
 import smtplib
 from unittest.mock import patch, MagicMock
@@ -38,9 +39,9 @@ def test_send_email_success(mock_smtp, email_notifier):
     mock_smtp.assert_called_once_with("smtp.example.com", 465)
 
     # Ensure SMTP server commands were called
-    mock_server.connect.assert_called_once()
-    mock_server.login.assert_called_once_with("user@example.com", "securepassword")
-    mock_server.sendmail.assert_called_once_with(
+    mock_server.__enter__.return_value.connect.assert_called_once()
+    mock_server.__enter__.return_value.login.assert_called_once_with("user@example.com", "securepassword")
+    mock_server.__enter__.return_value.sendmail.assert_called_once_with(
         "from@example.com", ["to@example.com"], MIMEText("Test Message").as_string()
     )
 
@@ -48,7 +49,7 @@ def test_send_email_success(mock_smtp, email_notifier):
 @patch("smtplib.SMTP_SSL", side_effect=smtplib.SMTPException("SMTP connection failed"))
 def test_send_email_failure(mock_smtp, email_notifier, caplog):
     """Test email sending failure and error logging."""
-    with pytest.raises(smtplib.SMTPException):
+    with pytest.raises(smtplib.SMTPException, match="SMTP connection failed"):
         email_notifier.send_email("Test Subject", "Test Message")
 
     # Verify log output contains an error message
