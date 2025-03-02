@@ -1,7 +1,7 @@
 from logging_config import logger
 import paramiko
 
-from configuration import Configuration
+from helper.configuration import Configuration
 
 # Konstanten
 MAX_RETRIES = 3

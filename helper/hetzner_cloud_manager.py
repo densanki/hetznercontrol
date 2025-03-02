@@ -1,10 +1,10 @@
+from helper.configuration import Configuration
 from logging_config import logger
 
 from hcloud import Client
 from hcloud.images import Image
 from hcloud.server_types import ServerType
 import time
-from configuration import Configuration
 
 # Konstanten
 MAX_RETRIES = 3

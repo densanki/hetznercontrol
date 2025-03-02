@@ -1,11 +1,13 @@
-from logging_config import logger
-import time
+import json
+import re
 
 import requests
+import time
 
-from configuration import Configuration
+from helper.configuration import Configuration
+from logging_config import logger
 
-# Konstanten
+# Consts
 OLLAMA_PORT = 11434
 OLLAMA_API_TAGS_ENDPOINT = f"http://{{}}:{OLLAMA_PORT}/api/tags"
 OLLAMA_API_PULL_ENDPOINT = f"http://{{}}:{OLLAMA_PORT}/api/pull"
@@ -13,44 +15,14 @@ OLLAMA_API_CHAT_ENDPOINT = f"http://{{}}:{OLLAMA_PORT}/api/generate"
 MAX_RETRIES = 5
 RETRY_DELAY = 10  # Sekunden
 
-class OllamaManager:
-    def __init__(self, config: Configuration, ssh_manager):
+
+class OllamaClient:
+    def __init__(self, config: Configuration, hostname):
         self.config = config
-        self.ssh_manager = ssh_manager
-
-    def install_ollama(self):
-        commands = [
-            "apt update",
-            "apt upgrade -y",
-            "apt install -y cpulimit",
-            "apt install -y nohup",
-            "apt autoremove",
-            "apt autoclean -y",
-        ]
-        self.ssh_manager.execute_commands(commands)
-
-        commands = [
-            "curl -fsSL https://ollama.com/install.sh | sh",
-        ]
-        self.ssh_manager.execute_commands(commands)
-
-        commands = [
-            'mkdir -p /etc/systemd/system/ollama.service.d',
-            'echo -e \'[Service]\\nEnvironment="OLLAMA_HOST=0.0.0.0:11434"\' | sudo tee /etc/systemd/system/ollama.service.d/override.conf'
-        ]
-        self.ssh_manager.execute_commands(commands)
-
-    #def start_ollama(self):
-        # commands = [
-        #     "source /etc/environment",
-        #     "printenv"
-        #     "ollama serve"
-        # ]
-        #
-        # self.ssh_manager.execute_commands(commands)
+        self.hostname = hostname
 
     def is_ollama_ready(self):
-        url = OLLAMA_API_TAGS_ENDPOINT.format(self.ssh_manager.get_hostname())
+        url = OLLAMA_API_TAGS_ENDPOINT.format(self.hostname)
         for attempt in range(MAX_RETRIES):
             try:
                 response = requests.get(url)
@@ -59,7 +31,7 @@ class OllamaManager:
                     return True
             except requests.ConnectionError as e:
                 logger.error(f"Failed ollama connection: {e}")
-                #logger.exception(e)
+                # logger.exception(e)
             time.sleep(RETRY_DELAY)
         return False
 
@@ -77,16 +49,31 @@ class OllamaManager:
             dict: The JSON response from the API indicating the status of the download.
 
         """
-        url = OLLAMA_API_PULL_ENDPOINT.format(self.ssh_manager.get_hostname())
+        url = OLLAMA_API_PULL_ENDPOINT.format(self.hostname)
         payload = {"model": model_name}
         try:
-            response = requests.post(url, json=payload)
-            response.raise_for_status()  # Raises an HTTPError for bad responses
-            print(response.text)
-            return response.json()
+            # Stream the response
+            with requests.post(url, json=payload, stream=True) as response:
+                response.raise_for_status()  # Raises an HTTPError for bad responses
+
+                # Process each line in the response
+                for line in response.iter_lines():
+                    if line:
+                        # Decode the line and parse it as JSON
+                        json_data = json.loads(line.decode("utf-8"))
+                        logger.debug(json_data)
+
+            return True
         except requests.exceptions.RequestException as e:
             logger.error(f"Failure on downloading model: {e}")
-            return None
+            return False
+
+    def sanitize_message(self, message: str) -> str:
+        """
+        Remove or replace unsupported Unicode characters from the message.
+        """
+        # Replace emojis and other non-ASCII characters with a placeholder
+        return re.sub(r"[^\x00-\x7F]", "", message)  # Remove all non-ASCII characters
 
     def send_chat_message(self, model_name, message):
         """
@@ -99,18 +86,20 @@ class OllamaManager:
         Returns:
             str: The model's response to the user's message.
         """
-        url = OLLAMA_API_CHAT_ENDPOINT.format(self.ssh_manager.get_hostname())
+        url = OLLAMA_API_CHAT_ENDPOINT.format(self.hostname)
         payload = {
             "model": model_name,
             "prompt": message,
-            "stream": False  # Set to True if you prefer streaming responses
+            "stream": False
         }
+        logger.debug(f"Model {model_name} request: \n{message}")
         try:
             response = requests.post(url, json=payload)
             response.raise_for_status()
-            print(response.text)
             data = response.json()
-            return data.get("response", "")
+            data_response = self.sanitize_message(data.get("response", ""))
+            logger.debug(f"Model's response: \n{data_response}")
+            return data_response
         except requests.exceptions.RequestException as e:
             logger.error(f"Failure on request chat: {e}")
             return ""

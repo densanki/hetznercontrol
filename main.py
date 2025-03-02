@@ -1,17 +1,17 @@
 from logging_config import logger
 
-from configuration import Configuration
-from email_notifier import EmailNotifier
-from hetzner_cloud_manager import HetznerCloudManager
-from ollama_manager import OllamaManager
+from helper.configuration import Configuration
+from helper.email_notifier import EmailNotifier
+from helper.hetzner_cloud_manager import HetznerCloudManager
+from ollama.ollama_manager import OllamaManager
 from server_provisioner import ServerProvisioner
-from ssh_manager import SSHManager
+from helper.ssh_manager import SSHManager
 import sys
 
 if __name__ == "__main__":
     logger.debug("### Starting")
 
-    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
     configuration = Configuration()
     hcloud_manager = HetznerCloudManager(configuration)
@@ -26,7 +26,7 @@ if __name__ == "__main__":
         ssh_manager,
         ollama_manager
     )
-    provisioner.provision_server()
+    provisioner.process_server()
 
     logger.debug("### Stopping")
     logger.debug("")

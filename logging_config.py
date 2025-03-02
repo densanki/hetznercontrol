@@ -6,7 +6,7 @@ logger = logging.getLogger('hetznercloud')
 logger.setLevel(logging.DEBUG)  # Set the desired logging level
 
 # Create handlers for file and console output
-file_handler = logging.FileHandler('application.log')
+file_handler = logging.FileHandler('log/application.log')
 console_handler = logging.StreamHandler()
 
 # Set logging levels for handlers if needed
@@ -20,6 +20,9 @@ formatter = logging.Formatter(
 )
 file_handler.setFormatter(formatter)
 console_handler.setFormatter(formatter)
+
+file_handler.encoding = 'utf-8'
+console_handler.encoding = 'utf-8'
 
 # Add handlers to the logger if they haven't been added yet
 if not logger.hasHandlers():

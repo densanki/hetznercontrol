@@ -2,6 +2,10 @@
 api_token=
 ssh_key_name=
 private_key_path=
+private_key_passphrase=
+ssh_username=
+delete=True
+server_instance_id=
 
 [smtp]
 host=

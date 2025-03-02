@@ -1,10 +1,11 @@
 import ssl
 
+from helper.configuration import Configuration
 from logging_config import logger
 import smtplib
 from email.mime.text import MIMEText
 
-from configuration import Configuration
+
 
 class EmailNotifier:
     def __init__(self, config: Configuration):
